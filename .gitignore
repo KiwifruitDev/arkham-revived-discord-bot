@@ -149,3 +149,7 @@ vite.config.ts.timestamp-*
 .turbo
 
 config.json
+
+# Bot runtime state and cached PSN avatars
+cache/
+data/
