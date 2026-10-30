@@ -1,0 +1,26 @@
+{
+  "name": "arkham-revived-discord-bot",
+  "version": "1.0.0",
+  "description": "Arkham: Revived Redux - Discord Bot",
+  "homepage": "https://github.com/KiwifruitDev/arkham-revived-discord-bot#readme",
+  "bugs": {
+    "url": "https://github.com/KiwifruitDev/arkham-revived-discord-bot/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KiwifruitDev/arkham-revived-discord-bot.git"
+  },
+  "license": "MIT",
+  "author": "KiwifruitDev",
+  "type": "module",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "chalk": "^6.0.1",
+    "discord.js": "^14.27.0",
+    "dotenv": "^18.0.9",
+    "psn-api": "^2.18.1"
+  }
+}

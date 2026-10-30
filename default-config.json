@@ -1,0 +1,9 @@
+{
+    "webhook_port": 4321,
+    "publish_player_activity": true,
+    "player_activity_text_channel_id": 1565605731288354857,
+    "total_ps3_users_text_channel_id": 1565613045969850368,
+    "matches_played_today_text_channel_id": 1565621597551988786,
+    "discord_server_id": 1444360529421406384,
+    "psn_npsso_owner_name": "KiwifruitDev"
+}
