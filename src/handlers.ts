@@ -117,7 +117,7 @@ export function createActivityHandlers(options: ActivityHandlerOptions): Activit
 				await announceLogin(payload);
 				return;
 			case "profile_update":
-				await announceProfileUpdate(payload);
+				//await announceProfileUpdate(payload);
 				return;
 			default:
 				logger.warn(`Ignoring unknown webhook payload type "${(payload as { type?: string }).type}"`);
