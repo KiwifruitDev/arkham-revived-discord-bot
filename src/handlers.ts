@@ -60,7 +60,7 @@ export function createActivityHandlers(options: ActivityHandlerOptions): Activit
 			avatarUrl,
 			content: buildLoginContent(payload.username, payload.platform)
 		});
-		await publishActivity(messageId);
+		//await publishActivity(messageId);
 		logger.info(`Announced login for ${payload.username}`);
 
 		// Keep the unique user channel (and the bot status) in sync with the new authentication.
@@ -88,7 +88,7 @@ export function createActivityHandlers(options: ActivityHandlerOptions): Activit
 			avatarUrl,
 			embeds: [buildProfileUpdateEmbed(payload, { avatarUrl })]
 		});
-		await publishActivity(messageId);
+		//await publishActivity(messageId);
 		logger.info(`Announced profile update for ${payload.username} (${payload.changes.length} changes)`);
 	}
 
