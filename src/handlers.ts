@@ -77,6 +77,7 @@ export function createActivityHandlers(options: ActivityHandlerOptions): Activit
 		const deltas = sumStatDeltas(statChanges);
 		if (hasStatIncrease(deltas)) {
 			const parsed = payload.timestamp ? Date.parse(payload.timestamp) : Number.NaN;
+			logger.info(`Buffered match stats for ${payload.username}: xp=${deltas.xp}, levels=${deltas.levels}, heroKills=${deltas.heroKills}, gangKills=${deltas.gangKills}`);
 			tracker.record({
 				username: payload.username,
 				uuid: payload.uuid,
@@ -85,6 +86,8 @@ export function createActivityHandlers(options: ActivityHandlerOptions): Activit
 				deltas,
 				stats: statChanges
 			});
+		} else {
+			logger.debug(`Profile update for ${payload.username} had no positive match stats (${payload.changes.length} changes)`);
 		}
 
 		if (!config.send_profile_updates) return;
