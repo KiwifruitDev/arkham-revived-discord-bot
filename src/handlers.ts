@@ -54,13 +54,18 @@ export function createActivityHandlers(options: ActivityHandlerOptions): Activit
 			logger.info(`New authentication for ${payload.username} (${auth.uniqueUsers} unique users in the last 24h)`);
 		}
 
+		if (!config.send_player_logins) {
+			if (auth.counted) await stats.refresh();
+			return;
+		}
+
 		const avatarUrl = await avatarUrlFor(payload.username);
 		const messageId = await discord.sendWebhookMessage(env.discordWebhookUrl, {
 			username: formatWebhookDisplayName(config, payload.username, payload.platform),
 			avatarUrl,
 			content: buildLoginContent(payload.username, payload.platform)
 		});
-		//await publishActivity(messageId);
+		if (config.publish_player_logins) await publishActivity(messageId);
 		logger.info(`Announced login for ${payload.username}`);
 
 		// Keep the unique user channel (and the bot status) in sync with the new authentication.
@@ -82,13 +87,15 @@ export function createActivityHandlers(options: ActivityHandlerOptions): Activit
 			});
 		}
 
+		if (!config.send_profile_updates) return;
+
 		const avatarUrl = await avatarUrlFor(payload.username);
 		const messageId = await discord.sendWebhookMessage(env.discordWebhookUrl, {
 			username: formatWebhookDisplayName(config, payload.username, payload.platform),
 			avatarUrl,
 			embeds: [buildProfileUpdateEmbed(payload, { avatarUrl })]
 		});
-		//await publishActivity(messageId);
+		if (config.publish_profile_updates) await publishActivity(messageId);
 		logger.info(`Announced profile update for ${payload.username} (${payload.changes.length} changes)`);
 	}
 
@@ -117,7 +124,7 @@ export function createActivityHandlers(options: ActivityHandlerOptions): Activit
 				await announceLogin(payload);
 				return;
 			case "profile_update":
-				//await announceProfileUpdate(payload);
+				await announceProfileUpdate(payload);
 				return;
 			default:
 				logger.warn(`Ignoring unknown webhook payload type "${(payload as { type?: string }).type}"`);

@@ -90,7 +90,8 @@ export class ChannelStatsService {
 		const text = template
 			.replace(/\{players\}/g, totalPs3Users === null ? "?" : totalPs3Users.toLocaleString("en-US"))
 			.replace(/\{matches\}/g, matchesInWindow.toLocaleString("en-US"))
-			.replace(/\{unique\}/g, uniqueUsers.toLocaleString("en-US"));
+			.replace(/\{unique\}/g, uniqueUsers.toLocaleString("en-US"))
+			.replace(/\{unique_users\}/g, uniqueUsers.toLocaleString("en-US"));
 		await this.discord.setPresence(text, this.config.bot_status_type);
 	}
 

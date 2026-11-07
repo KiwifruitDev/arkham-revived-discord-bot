@@ -4,6 +4,10 @@ export interface BotConfig {
 	webhook_port: number;
 	webhook_path: string;
 	publish_player_activity: boolean;
+	send_player_logins: boolean;
+	send_profile_updates: boolean;
+	publish_player_logins: boolean;
+	publish_profile_updates: boolean;
 	player_activity_channel_id: string;
 	total_ps3_users_channel_id: string;
 	matches_played_today_channel_id: string;
