@@ -169,6 +169,10 @@ export class DiscordService {
 
 	/** Sets the bot's online status line, e.g. "Watching Tracking 103 PS3 players". */
 	async setPresence(text: string, type = "watching"): Promise<boolean> {
+		return this.updatePresence(text, type, "online");
+	}
+
+	async updatePresence(text: string, type: string, status: "online" | "idle" | "dnd"): Promise<boolean> {
 		if (!this.client.user) {
 			this.logger.debug("Presence skipped: bot user is not ready");
 			return false;
@@ -178,10 +182,10 @@ export class DiscordService {
 		const activityType = DiscordService.activityTypes[type.toLowerCase()] ?? ActivityType.Watching;
 		try {
 			this.client.user.setPresence({
-				status: "online",
+				status,
 				activities: [{ name, type: activityType }]
 			});
-			this.logger.debug(`Presence set to ${activityType} "${name}"`);
+			this.logger.debug(`Presence set to ${status} with ${activityType} "${name}"`);
 			return true;
 		} catch (error) {
 			this.logger.warn(`Unable to set presence: ${error instanceof Error ? error.message : String(error)}`);
@@ -200,14 +204,14 @@ export class DiscordService {
 		}
 	}
 
-	async renameChannel(channelId: string, name: string): Promise<boolean> {
+	async renameChannel(channelId: string, name: string, reason: string): Promise<boolean> {
 		try {
 			const channel = await this.client.channels.fetch(channelId);
 			if (!channel || !("setName" in channel) || typeof channel.setName !== "function") {
 				this.logger.warn(`Channel ${channelId} cannot be renamed`);
 				return false;
 			}
-			await channel.setName(name.slice(0, 100), "Arkham: Revived player statistics");
+			await channel.setName(name.slice(0, 100), reason.slice(0, 512));
 			this.logger.info(`Renamed channel ${channelId} to "${name}"`);
 			return true;
 		} catch (error) {

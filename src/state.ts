@@ -9,6 +9,17 @@ export interface BotState {
 	/** First time each player authenticated inside the window. */
 	authentications: Record<string, number>;
 	lastChannelUpdate: Record<string, number>;
+	kvUsage?: KvUsageState;
+}
+
+export interface KvUsageState {
+	date: string;
+	warningActive: boolean;
+	warningSent: boolean;
+	limitReached: boolean;
+	limitNoticeSent: boolean;
+	remainingPercent: number;
+	resetNoticePending: boolean;
 }
 
 interface LegacyState extends Partial<BotState> {
@@ -57,7 +68,18 @@ export class StateStore {
 					matches: Array.isArray(parsed.matches) ? parsed.matches.filter((value) => Number.isFinite(value)) : [],
 					authentications:
 						parsed.authentications && typeof parsed.authentications === "object" ? { ...parsed.authentications } : {},
-					lastChannelUpdate: { ...(parsed.lastChannelUpdate ?? {}) }
+					lastChannelUpdate: { ...(parsed.lastChannelUpdate ?? {}) },
+					kvUsage:
+						parsed.kvUsage &&
+						typeof parsed.kvUsage.date === "string" &&
+						typeof parsed.kvUsage.warningActive === "boolean" &&
+						typeof parsed.kvUsage.warningSent === "boolean" &&
+						typeof parsed.kvUsage.limitReached === "boolean" &&
+						typeof parsed.kvUsage.limitNoticeSent === "boolean" &&
+						typeof parsed.kvUsage.resetNoticePending === "boolean" &&
+						Number.isFinite(parsed.kvUsage.remainingPercent)
+							? { ...parsed.kvUsage }
+							: undefined
 				};
 
 				// Older versions stored a per-day counter; keep its value inside the rolling window.
@@ -148,6 +170,27 @@ export class StateStore {
 
 	markUpdate(channelId: string, timestamp = this.now()): void {
 		this.data.lastChannelUpdate[channelId] = timestamp;
+		this.persist();
+	}
+
+	get kvUsageState(): KvUsageState | null {
+		return this.data.kvUsage ? { ...this.data.kvUsage } : null;
+	}
+
+	setKvUsageState(state: KvUsageState): void {
+		const previous = this.data.kvUsage;
+		if (
+			previous?.date === state.date &&
+			previous.warningActive === state.warningActive &&
+			previous.warningSent === state.warningSent &&
+			previous.limitReached === state.limitReached &&
+			previous.limitNoticeSent === state.limitNoticeSent &&
+			previous.remainingPercent === state.remainingPercent &&
+			previous.resetNoticePending === state.resetNoticePending
+		) {
+			return;
+		}
+		this.data.kvUsage = { ...state };
 		this.persist();
 	}
 }

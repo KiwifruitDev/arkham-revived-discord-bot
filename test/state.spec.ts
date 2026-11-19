@@ -52,14 +52,14 @@ describe("state store", () => {
 	it("counts unique authentications only once per window", () => {
 		const ctx = setup();
 		try {
-			expect(ctx.store.recordAuthentication("Another_Hermit")).toEqual({ counted: true, uniqueUsers: 1 });
-			expect(ctx.store.recordAuthentication("Another_Hermit")).toEqual({ counted: false, uniqueUsers: 1 });
+			expect(ctx.store.recordAuthentication("KiwifruitDev")).toEqual({ counted: true, uniqueUsers: 1 });
+			expect(ctx.store.recordAuthentication("KiwifruitDev")).toEqual({ counted: false, uniqueUsers: 1 });
 			expect(ctx.store.recordAuthentication("BATTLE-DONKEY")).toEqual({ counted: true, uniqueUsers: 2 });
 			expect(ctx.store.uniqueUsersInWindow).toBe(2);
 
 			ctx.advance(24 * HOUR + 1);
 			expect(ctx.store.uniqueUsersInWindow).toBe(0);
-			expect(ctx.store.recordAuthentication("Another_Hermit")).toEqual({ counted: true, uniqueUsers: 1 });
+			expect(ctx.store.recordAuthentication("KiwifruitDev")).toEqual({ counted: true, uniqueUsers: 1 });
 		} finally {
 			ctx.cleanup();
 		}
@@ -71,7 +71,7 @@ describe("state store", () => {
 			expect(ctx.store.nextExpiry()).toBeNull();
 			ctx.store.recordMatch();
 			ctx.advance(HOUR);
-			ctx.store.recordAuthentication("Another_Hermit");
+			ctx.store.recordAuthentication("KiwifruitDev");
 			expect(ctx.store.nextExpiry()).toBe(1_000_000_000 + 24 * HOUR);
 
 			ctx.advance(24 * HOUR - 1);
@@ -85,7 +85,7 @@ describe("state store", () => {
 		const ctx = setup();
 		try {
 			ctx.store.recordMatch();
-			ctx.store.recordAuthentication("Another_Hermit");
+			ctx.store.recordAuthentication("KiwifruitDev");
 			ctx.store.markUpdate("channel", 1_234);
 
 			const reloaded = ctx.reload();

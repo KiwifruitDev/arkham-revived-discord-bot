@@ -49,7 +49,7 @@ describe("cloudflare worker flow", () => {
 		const state = new StateStore(path.join(tempDir, "state.json"));
 		state.load();
 
-		psn.avatars.set("Another_Hermit", await solidPng({ r: 200, g: 20, b: 20 }));
+		psn.avatars.set("KiwifruitDev", await solidPng({ r: 200, g: 20, b: 20 }));
 		psn.avatars.set("BATTLE-DONKEY", await solidPng({ r: 20, g: 20, b: 200 }));
 
 		let clock = Date.parse(secondPlayerProfileUpdate.timestamp);
@@ -120,9 +120,9 @@ describe("cloudflare worker flow", () => {
 
 		expect(harness.discord.webhookMessages).toHaveLength(1);
 		const message = harness.discord.webhookMessages[0];
-		expect(message.username).toBe("Another_Hermit (PS3)");
-		expect(message.content).toBe("**Another_Hermit** (PS3) has logged in to Arkham: Revived Redux.");
-		expect(message.avatarUrl).toContain("Another_Hermit");
+		expect(message.username).toBe("KiwifruitDev (PS3)");
+		expect(message.content).toBe("**KiwifruitDev** (PS3) has logged in to Arkham: Revived Redux.");
+		expect(message.avatarUrl).toContain("KiwifruitDev");
 		expect(message.webhookUrl).toBe(testEnv.discordWebhookUrl);
 		expect(message.embeds ?? []).toHaveLength(0);
 
@@ -147,14 +147,14 @@ describe("cloudflare worker flow", () => {
 		expect(response.status).toBe(202);
 
 		const message = harness.discord.webhookMessages[0];
-		expect(message.username).toBe("Another_Hermit (PS3)");
+		expect(message.username).toBe("KiwifruitDev (PS3)");
 		expect(message.content).toBeUndefined();
 		const embed = message.embeds?.[0];
 		expect(embed?.description).toContain("**Account XP**: 1,250 -> 1,480");
 		expect(embed?.description).toContain("**Account XP Level**: 28 -> 29");
 		expect(embed?.description).toContain("**Hero Kills On Elites**: 12 -> 15");
 		expect(embed?.description).toContain("**Map Round Win Chemplant Hero**: No -> Yes");
-		expect(embed?.thumbnail?.url).toContain("Another_Hermit");
+		expect(embed?.thumbnail?.url).toContain("KiwifruitDev");
 		expect(harness.discord.published).toHaveLength(1);
 	});
 
@@ -173,9 +173,9 @@ describe("cloudflare worker flow", () => {
 		expect(message.embeds?.[0]?.title).toBe("Match Result");
 
 		const fieldNames = (message.embeds?.[0]?.fields ?? []).map((field) => field.name);
-		expect(fieldNames.sort()).toEqual(["Another_Hermit", "BATTLE-DONKEY"]);
+		expect(fieldNames.sort()).toEqual(["BATTLE-DONKEY", "KiwifruitDev"]);
 
-		const hermitField = (message.embeds?.[0]?.fields ?? []).find((field) => field.name === "Another_Hermit");
+		const hermitField = (message.embeds?.[0]?.fields ?? []).find((field) => field.name === "KiwifruitDev");
 		expect(hermitField?.value).toContain("**Account XP**: +230 (total 1,480)");
 		expect(hermitField?.value).toContain("**Account Level**: +1 (total 29)");
 		expect(hermitField?.value).toContain("**Hero Kills**: +3 (total 15)");
@@ -185,7 +185,7 @@ describe("cloudflare worker flow", () => {
 		expect(donkeyField?.value).toContain("**Account XP**: +110 (total 910)");
 		expect(donkeyField?.value).toContain("**Bane Level**: +1 (total 13)");
 
-		expect(message.embeds?.[0]?.image?.url).toBe("attachment://match-result.png");
+		expect(message.embeds?.[0]?.thumbnail?.url).toBe("attachment://match-result.png");
 
 		expect(message.files).toHaveLength(1);
 		expect(message.files?.[0].name).toBe("match-result.png");
@@ -232,6 +232,16 @@ describe("cloudflare worker flow", () => {
 		expect(harness.discord.webhookMessages).toHaveLength(1);
 	});
 
+	it("refreshes KV usage after each successful profile write webhook", async () => {
+		await harness.post({
+			type: "profile_write",
+			platform: "ps3",
+			username: "KiwifruitDev",
+			uuid: profileUpdatePayload.uuid
+		});
+		expect(harness.stats.usageRefreshes).toBe(1);
+	});
+
 	it("uses locally hosted avatars when PUBLIC_BASE_URL is configured", async () => {
 		const handlers = createActivityHandlers({
 			config: testConfig,
@@ -243,6 +253,6 @@ describe("cloudflare worker flow", () => {
 			stats: harness.stats as never,
 			publisher: { enqueue: async () => {} }
 		});
-		expect(await handlers.avatarUrlFor("Another_Hermit")).toBe("https://bot.example.com/avatars/Another_Hermit.img");
+		expect(await handlers.avatarUrlFor("KiwifruitDev")).toBe("https://bot.example.com/avatars/KiwifruitDev.img");
 	});
 });

@@ -16,15 +16,20 @@ export class FakeDiscord {
 	readonly channelMessages: RecordedChannelMessage[] = [];
 	readonly published: Array<{ channelId: string; messageId: string }> = [];
 	readonly renames: Array<{ channelId: string; name: string }> = [];
-	readonly presences: Array<{ text: string; type: string }> = [];
+	readonly presences: Array<{ text: string; type: string; status: string }> = [];
 	/** Results returned by publishMessage, consumed in order; defaults to success. */
 	readonly publishResults: PublishResult[] = [];
 	channelNames = new Map<string, string>();
 	failRenames = false;
+	failChannelMessages = false;
 	private nextId = 1;
 
 	async setPresence(text: string, type = "watching"): Promise<boolean> {
-		this.presences.push({ text, type });
+		return this.updatePresence(text, type, "online");
+	}
+
+	async updatePresence(text: string, type: string, status: "online" | "idle" | "dnd"): Promise<boolean> {
+		this.presences.push({ text, type, status });
 		return true;
 	}
 
@@ -41,6 +46,7 @@ export class FakeDiscord {
 	}
 
 	async sendChannelMessage(options: ChannelMessageOptions): Promise<string | null> {
+		if (this.failChannelMessages) return null;
 		const id = `channel-message-${this.nextId++}`;
 		this.channelMessages.push({ ...options, id });
 		return id;
@@ -50,7 +56,7 @@ export class FakeDiscord {
 		return this.channelNames.get(channelId) ?? null;
 	}
 
-	async renameChannel(channelId: string, name: string): Promise<boolean> {
+	async renameChannel(channelId: string, name: string, _reason: string): Promise<boolean> {
 		if (this.failRenames) return false;
 		this.renames.push({ channelId, name });
 		this.channelNames.set(channelId, name);
@@ -62,10 +68,16 @@ export class FakeKv {
 	enabled = true;
 	ps3Users = 103;
 	failures = 0;
+	dailyUsage: { date: string; writes: number; dailyLimit: number | null; plan: "free" | "paid" | "unknown" } | null = null;
 
 	async countPs3Profiles(): Promise<number | null> {
 		if (this.failures > 0) return null;
 		return this.enabled ? this.ps3Users : null;
+	}
+
+	async getDailyWriteUsage() {
+		if (this.failures > 0) return null;
+		return this.enabled ? this.dailyUsage : null;
 	}
 }
 
@@ -96,9 +108,14 @@ export class FakePsn {
 
 export class FakeStats {
 	refreshes = 0;
+	usageRefreshes = 0;
 
 	async refresh(): Promise<void> {
 		this.refreshes += 1;
+	}
+
+	async refreshUsage(): Promise<void> {
+		this.usageRefreshes += 1;
 	}
 }
 

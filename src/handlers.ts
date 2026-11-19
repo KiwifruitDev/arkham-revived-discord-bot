@@ -63,7 +63,7 @@ export function createActivityHandlers(options: ActivityHandlerOptions): Activit
 		const messageId = await discord.sendWebhookMessage(env.discordWebhookUrl, {
 			username: formatWebhookDisplayName(config, payload.username, payload.platform),
 			avatarUrl,
-			content: buildLoginContent(payload.username, payload.platform)
+			content: buildLoginContent(payload.username, config.strings, payload.platform)
 		});
 		if (config.publish_player_logins) await publishActivity(messageId);
 		logger.info(`Announced login for ${payload.username}`);
@@ -73,7 +73,7 @@ export function createActivityHandlers(options: ActivityHandlerOptions): Activit
 	}
 
 	async function announceProfileUpdate(payload: ProfileUpdatePayload): Promise<void> {
-		const statChanges = deriveStatChanges(payload.changes);
+		const statChanges = deriveStatChanges(payload.changes, config.strings);
 		const deltas = sumStatDeltas(statChanges);
 		if (hasStatIncrease(deltas)) {
 			const parsed = payload.timestamp ? Date.parse(payload.timestamp) : Number.NaN;
@@ -96,7 +96,7 @@ export function createActivityHandlers(options: ActivityHandlerOptions): Activit
 		const messageId = await discord.sendWebhookMessage(env.discordWebhookUrl, {
 			username: formatWebhookDisplayName(config, payload.username, payload.platform),
 			avatarUrl,
-			embeds: [buildProfileUpdateEmbed(payload, { avatarUrl })]
+			embeds: [buildProfileUpdateEmbed(payload, config.strings, config.language, { avatarUrl })]
 		});
 		if (config.publish_profile_updates) await publishActivity(messageId);
 		logger.info(`Announced profile update for ${payload.username} (${payload.changes.length} changes)`);
@@ -106,7 +106,10 @@ export function createActivityHandlers(options: ActivityHandlerOptions): Activit
 		const avatars = await Promise.all(match.players.map((player) => psn.getAvatarBuffer(player.username)));
 		const image = await composeAvatarGrid(avatars, { cellSize: config.avatar_grid_cell_size });
 		const matchesInWindow = state.recordMatch();
-		const embed = buildMatchEmbed(match, { matchesPlayedToday: matchesInWindow, imageName: "match-result.png" });
+		const embed = buildMatchEmbed(match, config.strings, config.language, {
+			matchesPlayedToday: matchesInWindow,
+			imageName: "match-result.png"
+		});
 
 		const messageId = await discord.sendChannelMessage({
 			channelId: config.player_activity_channel_id,
@@ -128,6 +131,9 @@ export function createActivityHandlers(options: ActivityHandlerOptions): Activit
 				return;
 			case "profile_update":
 				await announceProfileUpdate(payload);
+				return;
+			case "profile_write":
+				await stats.refreshUsage();
 				return;
 			default:
 				logger.warn(`Ignoring unknown webhook payload type "${(payload as { type?: string }).type}"`);

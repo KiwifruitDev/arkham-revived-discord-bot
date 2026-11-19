@@ -40,15 +40,7 @@ async function main(): Promise<void> {
 		namespaceId: env.cloudflareProfilesNamespaceId,
 		logger: logger.child("cloudflare")
 	});
-	if (!kv.enabled) logger.warn("Cloudflare API token is missing, the total PS3 users channel will not update");
-
-	const stats = new ChannelStatsService({
-		config,
-		discord,
-		state,
-		kv,
-		logger: logger.child("channels")
-	});
+	if (!kv.enabled) logger.warn("Cloudflare API token is missing, the player count and KV usage channels will not update");
 
 	const tracker = new MatchTracker({
 		windowMs: config.match_detection_window_ms,
@@ -67,6 +59,15 @@ async function main(): Promise<void> {
 			logger: logger.child("publish")
 		}),
 		logger: logger.child("publish")
+	});
+
+	const stats = new ChannelStatsService({
+		config,
+		discord,
+		state,
+		kv,
+		publisher,
+		logger: logger.child("channels")
 	});
 
 	const handlers = createActivityHandlers({

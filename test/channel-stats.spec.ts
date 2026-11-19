@@ -60,7 +60,7 @@ describe("channel statistics", () => {
 				{ channelId: testConfig.total_ps3_users_channel_id, name: "Total PS3 Users: 103" }
 			]);
 			expect(ctx.discord.presences).toEqual([
-				{ text: "103 PS3 players · 0 matches today · 0 unique users", type: "watching" }
+				{ text: "Tracking 103 PS3 players...", type: "watching", status: "online" }
 			]);
 		} finally {
 			ctx.cleanup();
@@ -71,15 +71,19 @@ describe("channel statistics", () => {
 		const ctx = setup();
 		try {
 			ctx.state.recordMatch();
-			ctx.state.recordAuthentication("Another_Hermit");
+			ctx.state.recordAuthentication("KiwifruitDev");
 			ctx.state.recordAuthentication("BATTLE-DONKEY");
-			ctx.state.recordAuthentication("Another_Hermit");
+			ctx.state.recordAuthentication("KiwifruitDev");
 
 			await ctx.service.refresh();
 			const names = ctx.discord.renames.map((rename) => rename.name);
 			expect(names).toContain("Matches (24h): 1");
 			expect(names).toContain("Logins (24h): 2");
-			expect(ctx.discord.presences.at(-1)?.text).toBe("103 PS3 players · 1 matches today · 2 unique users");
+			expect(ctx.discord.presences.at(-1)).toEqual({
+				text: "Tracking 103 PS3 players...",
+				type: "watching",
+				status: "online"
+			});
 		} finally {
 			ctx.cleanup();
 		}
@@ -110,7 +114,7 @@ describe("channel statistics", () => {
 		const ctx = setup();
 		try {
 			ctx.state.recordMatch();
-			ctx.state.recordAuthentication("Another_Hermit");
+			ctx.state.recordAuthentication("KiwifruitDev");
 			await ctx.service.refresh();
 			expect(ctx.discord.renames.map((rename) => rename.name)).toEqual([
 				"Matches (24h): 1",
@@ -160,8 +164,145 @@ describe("channel statistics", () => {
 			ctx.state.recordMatch();
 			await ctx.service.refresh();
 
-			expect(ctx.discord.presences).toEqual([{ text: "? PS3 players · 1 matches today · 0 unique users", type: "watching" }]);
+			expect(ctx.discord.presences).toEqual([
+				{ text: "Tracking ? PS3 players...", type: "watching", status: "online" }
+			]);
 			expect(ctx.discord.renames).toHaveLength(2);
+		} finally {
+			ctx.cleanup();
+		}
+	});
+
+	it("warns at half of the account's free-tier daily writes", async () => {
+		const ctx = setup();
+		try {
+			ctx.kv.dailyUsage = { date: "2026-11-19", writes: 500, dailyLimit: 1_000, plan: "free" };
+			await ctx.service.refresh();
+
+			expect(ctx.discord.renames).toContainEqual({
+				channelId: testConfig.kv_usage_channel_id,
+				name: "Usage: 50% [##########..........]"
+			});
+			expect(ctx.discord.channelMessages.map((message) => message.content)).toEqual([
+				"Cloudflare KV has used 50% of today's daily write allowance, with 50% remaining. If usage reaches 100%, the server will be unavailable until the daily reset."
+			]);
+			expect(ctx.discord.presences.at(-1)).toEqual({
+				text: "Warning: 50% daily usage remaining",
+				type: "watching",
+				status: "idle"
+			});
+
+			ctx.kv.dailyUsage = { date: "2026-11-20", writes: 0, dailyLimit: 1_000, plan: "free" };
+			await ctx.service.refresh();
+			expect(ctx.discord.channelMessages).toHaveLength(1);
+			expect(ctx.discord.presences.at(-1)?.status).toBe("online");
+		} finally {
+			ctx.cleanup();
+		}
+	});
+
+	it("marks the bot unavailable at the limit and announces only a later daily reset", async () => {
+		const ctx = setup();
+		try {
+			ctx.kv.dailyUsage = { date: "2026-11-19", writes: 1_000, dailyLimit: 1_000, plan: "free" };
+			await ctx.service.refresh();
+
+			expect(ctx.discord.renames).toContainEqual({
+				channelId: testConfig.kv_usage_channel_id,
+				name: "Usage: 100% [####################]"
+			});
+			expect(ctx.discord.channelMessages.map((message) => message.content)).toEqual([
+				"Cloudflare KV's daily write allowance has been exhausted. The server is unavailable until the daily reset.",
+				"The server is unavailable because Cloudflare KV's daily write allowance has been reached. Service will resume after the daily reset."
+			]);
+			expect(ctx.discord.presences.at(-1)).toEqual({
+				text: "Unavailable: daily usage limit reached",
+				type: "watching",
+				status: "dnd"
+			});
+
+			ctx.kv.dailyUsage = { date: "2026-11-20", writes: 0, dailyLimit: 1_000, plan: "free" };
+			await ctx.service.refresh();
+
+			expect(ctx.discord.channelMessages.map((message) => message.content).at(-1)).toBe(
+				"Cloudflare KV's daily write allowance has reset. Profile saves are available again."
+			);
+			expect(ctx.discord.presences.at(-1)).toEqual({
+				text: "Tracking 103 PS3 players...",
+				type: "watching",
+				status: "online"
+			});
+		} finally {
+			ctx.cleanup();
+		}
+	});
+
+	it("routes simulated threshold and reset notifications once without contacting Cloudflare", async () => {
+		const ctx = setup();
+		try {
+			ctx.kv.dailyUsage = { date: "2026-11-19", writes: 499, dailyLimit: 1_000, plan: "free" };
+			await ctx.service.refresh();
+			expect(ctx.discord.channelMessages).toHaveLength(0);
+
+			ctx.kv.dailyUsage = { date: "2026-11-19", writes: 500, dailyLimit: 1_000, plan: "free" };
+			await ctx.service.refresh();
+			expect(ctx.discord.channelMessages).toHaveLength(1);
+			expect(ctx.discord.channelMessages[0]).toMatchObject({
+				channelId: testConfig.player_activity_channel_id,
+				content: testConfig.strings.kv_warning_message
+					.replace("{percent}", "50")
+					.replace("{remaining}", "50")
+			});
+
+			ctx.kv.dailyUsage = { date: "2026-11-19", writes: 1_000, dailyLimit: 1_000, plan: "free" };
+			await ctx.service.refresh();
+			await ctx.service.refresh();
+			expect(ctx.discord.channelMessages).toHaveLength(2);
+			expect(ctx.discord.channelMessages[1]).toMatchObject({
+				channelId: testConfig.player_activity_channel_id,
+				content: testConfig.strings.kv_limit_reached_message
+			});
+
+			ctx.kv.dailyUsage = { date: "2026-11-20", writes: 0, dailyLimit: 1_000, plan: "free" };
+			await ctx.service.refresh();
+			expect(ctx.discord.channelMessages).toHaveLength(3);
+			expect(ctx.discord.channelMessages[2]).toMatchObject({
+				channelId: testConfig.player_activity_channel_id,
+				content: testConfig.strings.kv_reset_message
+			});
+		} finally {
+			ctx.cleanup();
+		}
+	});
+
+	it("does not warn for paid accounts with no daily cap", async () => {
+		const ctx = setup();
+		try {
+			ctx.kv.dailyUsage = { date: "2026-11-19", writes: 5_000, dailyLimit: null, plan: "paid" };
+			await ctx.service.refresh();
+
+			expect(ctx.discord.renames).toContainEqual({
+				channelId: testConfig.kv_usage_channel_id,
+				name: "Usage: 5,000 writes (no daily cap)"
+			});
+			expect(ctx.discord.channelMessages).toHaveLength(0);
+			expect(ctx.discord.presences.at(-1)?.status).toBe("online");
+		} finally {
+			ctx.cleanup();
+		}
+	});
+
+	it("keeps the warning status active and retries a failed warning message", async () => {
+		const ctx = setup();
+		try {
+			ctx.kv.dailyUsage = { date: "2026-11-19", writes: 500, dailyLimit: 1_000, plan: "free" };
+			ctx.discord.failChannelMessages = true;
+			await ctx.service.refresh();
+			expect(ctx.discord.presences.at(-1)?.status).toBe("idle");
+
+			ctx.discord.failChannelMessages = false;
+			await ctx.service.refresh();
+			expect(ctx.discord.channelMessages).toHaveLength(1);
 		} finally {
 			ctx.cleanup();
 		}

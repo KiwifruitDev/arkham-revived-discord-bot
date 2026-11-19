@@ -49,7 +49,7 @@ describe("match tracker", () => {
 	it("detects a match when two players report XP within the window", async () => {
 		const onMatch = vi.fn();
 		const clock = tracker({ onMatch });
-		clock.instance.record(statEvent("Another_Hermit", clock.now));
+		clock.instance.record(statEvent("KiwifruitDev", clock.now));
 		clock.instance.record(statEvent("BATTLE-DONKEY", clock.advance(4_000)));
 
 		expect(await clock.instance.tick(clock.now)).toBeNull();
@@ -58,7 +58,7 @@ describe("match tracker", () => {
 
 		expect(match).not.toBeNull();
 		expect(onMatch).toHaveBeenCalledTimes(1);
-		expect(match?.players.map((player) => player.username).sort()).toEqual(["Another_Hermit", "BATTLE-DONKEY"]);
+		expect(match?.players.map((player) => player.username).sort()).toEqual(["BATTLE-DONKEY", "KiwifruitDev"]);
 		expect(match?.total.xp).toBe(200);
 		expect(clock.instance.pendingEvents).toBe(0);
 	});
@@ -66,7 +66,7 @@ describe("match tracker", () => {
 	it("ignores a single player writing on their own", async () => {
 		const onMatch = vi.fn();
 		const clock = tracker({ onMatch });
-		clock.instance.record(statEvent("Another_Hermit", clock.now));
+		clock.instance.record(statEvent("KiwifruitDev", clock.now));
 		clock.advance(15_000);
 
 		expect(await clock.instance.tick(clock.now)).toBeNull();
@@ -77,7 +77,7 @@ describe("match tracker", () => {
 	it("ignores writes that are more than 10 seconds apart", async () => {
 		const onMatch = vi.fn();
 		const clock = tracker({ onMatch });
-		clock.instance.record(statEvent("Another_Hermit", clock.now));
+		clock.instance.record(statEvent("KiwifruitDev", clock.now));
 		clock.instance.record(statEvent("BATTLE-DONKEY", clock.advance(12_000)));
 		clock.advance(4_000);
 
@@ -88,7 +88,7 @@ describe("match tracker", () => {
 	it("waits for the quiet period before flushing", async () => {
 		const onMatch = vi.fn();
 		const clock = tracker({ onMatch });
-		clock.instance.record(statEvent("Another_Hermit", clock.now));
+		clock.instance.record(statEvent("KiwifruitDev", clock.now));
 		clock.instance.record(statEvent("BATTLE-DONKEY", clock.now));
 		clock.advance(1_000);
 		expect(await clock.instance.tick(clock.now)).toBeNull();
@@ -100,13 +100,13 @@ describe("match tracker", () => {
 	it("accumulates several writes from the same player", async () => {
 		const onMatch = vi.fn();
 		const clock = tracker({ onMatch });
-		clock.instance.record(statEvent("Another_Hermit", clock.now, 100));
-		clock.instance.record(statEvent("Another_Hermit", clock.advance(2_000), 50));
+		clock.instance.record(statEvent("KiwifruitDev", clock.now, 100));
+		clock.instance.record(statEvent("KiwifruitDev", clock.advance(2_000), 50));
 		clock.instance.record(statEvent("BATTLE-DONKEY", clock.advance(1_000), 70));
 		clock.advance(3_000);
 
 		const match = await clock.instance.tick(clock.now);
-		const hermit = match?.players.find((player) => player.username === "Another_Hermit");
+		const hermit = match?.players.find((player) => player.username === "KiwifruitDev");
 		expect(hermit?.deltas.xp).toBe(150);
 		expect(hermit?.events).toBe(2);
 		expect(match?.total.xp).toBe(220);

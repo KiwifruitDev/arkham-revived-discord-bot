@@ -1,4 +1,5 @@
 {
+  "language": "en-US",
   "webhook_port": 4322,
   "webhook_path": "/webhook",
   "publish_player_activity": true,
@@ -9,13 +10,11 @@
   "player_activity_channel_id": "1565605731288354857",
   "total_ps3_users_channel_id": "1568720053304692897",
   "matches_played_today_channel_id": "1565621597551988786",
-  "total_ps3_users_channel_name": "Total PS3 Users: {count}",
-  "matches_played_today_channel_name": "Matches (24h): {count}",
+  "kv_usage_channel_id": "1573087152261304460",
   "channel_stats_update_interval_ms": 600000,
   "channel_name_update_cooldown_ms": 610000,
   "discord_server_id": "1444360529421406384",
   "psn_npsso_owner_name": "KiwifruitDev",
-  "webhook_display_name": "{username} ({platform})",
   "match_detection_window_ms": 10000,
   "match_detection_quiet_ms": 3000,
   "match_min_players": 2,
@@ -26,12 +25,10 @@
   "state_directory": "data",
   "cache_directory": "cache",
   "log_level": "info",
-  "bot_status_activity": "Tracking {players} PS3 players...",
   "bot_status_type": "watching",
   "publish_max_per_hour": 10,
   "publish_window_ms": 3600000,
   "publish_queue_max_age_ms": 7200000,
   "unique_users_today_channel_id": "1565647820600508468",
-  "unique_users_today_channel_name": "Logins (24h): {count}",
   "stats_window_ms": 86400000
 }

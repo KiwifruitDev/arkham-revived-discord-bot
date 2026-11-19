@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
+import { loadDiscordStrings } from "./localization.ts";
 import type { BotConfig, BotEnv, LogLevel } from "./types.ts";
 
 export const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -19,7 +20,8 @@ export interface LoadedConfig {
 	paths: ResolvedPaths;
 }
 
-const fallbackConfig: BotConfig = {
+const fallbackConfig: Omit<BotConfig, "strings"> = {
+	language: "en-US",
 	webhook_port: 4322,
 	webhook_path: "/webhook",
 	publish_player_activity: true,
@@ -31,21 +33,17 @@ const fallbackConfig: BotConfig = {
 	total_ps3_users_channel_id: "",
 	matches_played_today_channel_id: "",
 	unique_users_today_channel_id: "",
-	total_ps3_users_channel_name: "Total PS3 Users: {count}",
-	matches_played_today_channel_name: "Matches (24h): {count}",
-	unique_users_today_channel_name: "Logins (24h): {count}",
+	kv_usage_channel_id: "",
 	stats_window_ms: 86_400_000,
 	channel_stats_update_interval_ms: 600_000,
 	channel_name_update_cooldown_ms: 610_000,
 	discord_server_id: "",
 	psn_npsso_owner_name: "",
-	webhook_display_name: "{username} ({platform})",
 	match_detection_window_ms: 10_000,
 	match_detection_quiet_ms: 3_000,
 	match_min_players: 2,
 	avatar_grid_cell_size: 160,
 	avatar_cache_ttl_ms: 604_800_000,
-	bot_status_activity: "Tracking {players} PS3 players...",
 	bot_status_type: "watching",
 	publish_max_per_hour: 10,
 	publish_window_ms: 3_600_000,
@@ -92,6 +90,8 @@ export function loadConfig(options: { root?: string; envFile?: string } = {}): L
 	const defaults = { ...fallbackConfig, ...readJsonFile<BotConfig>(path.join(root, "default-config.json")) };
 	const local = readJsonFile<Record<string, unknown>>(path.join(root, "config.json"));
 	const merged: Record<string, unknown> = { ...defaults, ...local };
+	const language = asString(merged.language, "en-US") || "en-US";
+	const strings = loadDiscordStrings(root, language);
 
 	// Legacy config keys used a "_text_channel_id" suffix even though the channels are voice channels.
 	merged.player_activity_channel_id ??= local.player_activity_text_channel_id;
@@ -101,6 +101,8 @@ export function loadConfig(options: { root?: string; envFile?: string } = {}): L
 	dotenv.config({ path: options.envFile ?? path.join(root, ".env"), quiet: true });
 
 	const config: BotConfig = {
+		language,
+		strings,
 		webhook_port: asNumber(process.env.WEBHOOK_PORT ?? merged.webhook_port, 4322),
 		webhook_path: asString(merged.webhook_path, "/webhook") || "/webhook",
 		publish_player_activity: asBoolean(merged.publish_player_activity, true),
@@ -112,24 +114,17 @@ export function loadConfig(options: { root?: string; envFile?: string } = {}): L
 		total_ps3_users_channel_id: asString(merged.total_ps3_users_channel_id),
 		matches_played_today_channel_id: asString(merged.matches_played_today_channel_id),
 		unique_users_today_channel_id: asString(merged.unique_users_today_channel_id),
-		total_ps3_users_channel_name: asString(merged.total_ps3_users_channel_name, "Total PS3 Users: {count}"),
-		matches_played_today_channel_name: asString(merged.matches_played_today_channel_name, "Matches (24h): {count}"),
-		unique_users_today_channel_name: asString(merged.unique_users_today_channel_name, "Logins (24h): {count}"),
+		kv_usage_channel_id: asString(merged.kv_usage_channel_id),
 		stats_window_ms: Math.max(60_000, asNumber(merged.stats_window_ms, 86_400_000)),
 		channel_stats_update_interval_ms: asNumber(merged.channel_stats_update_interval_ms, 600_000),
 		channel_name_update_cooldown_ms: asNumber(merged.channel_name_update_cooldown_ms, 610_000),
 		discord_server_id: asString(merged.discord_server_id),
 		psn_npsso_owner_name: asString(merged.psn_npsso_owner_name),
-		webhook_display_name: asString(merged.webhook_display_name, "{username} ({platform})"),
 		match_detection_window_ms: asNumber(merged.match_detection_window_ms, 10_000),
 		match_detection_quiet_ms: asNumber(merged.match_detection_quiet_ms, 3_000),
 		match_min_players: Math.max(2, asNumber(merged.match_min_players, 2)),
 		avatar_grid_cell_size: Math.max(32, asNumber(merged.avatar_grid_cell_size, 160)),
 		avatar_cache_ttl_ms: asNumber(merged.avatar_cache_ttl_ms, 604_800_000),
-		bot_status_activity: asString(
-			merged.bot_status_activity,
-			"Tracking {players} PS3 players..."
-		),
 		bot_status_type: asString(merged.bot_status_type, "watching").toLowerCase(),
 		publish_max_per_hour: Math.max(1, asNumber(merged.publish_max_per_hour, 10)),
 		publish_window_ms: Math.max(60_000, asNumber(merged.publish_window_ms, 3_600_000)),

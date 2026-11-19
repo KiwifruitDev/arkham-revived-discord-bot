@@ -17,7 +17,7 @@ describe("webhook server", () => {
 
 	beforeAll(async () => {
 		avatarDir = fs.mkdtempSync(path.join(os.tmpdir(), "arkham-avatars-"));
-		fs.writeFileSync(path.join(avatarDir, "Another_Hermit.img"), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]));
+		fs.writeFileSync(path.join(avatarDir, "KiwifruitDev.img"), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]));
 		server = createWebhookServer({
 			port: 0,
 			webhookPath: "/webhook",
@@ -86,7 +86,7 @@ describe("webhook server", () => {
 	});
 
 	it("serves cached avatars for Discord", async () => {
-		const response = await fetch(`http://127.0.0.1:${server.port}/avatars/Another_Hermit.img`);
+		const response = await fetch(`http://127.0.0.1:${server.port}/avatars/KiwifruitDev.img`);
 		expect(response.status).toBe(200);
 		expect(response.headers.get("content-type")).toBe("image/png");
 		expect((await fetch(`http://127.0.0.1:${server.port}/avatars/..%2F..%2Fetc%2Fpasswd`)).status).toBe(404);

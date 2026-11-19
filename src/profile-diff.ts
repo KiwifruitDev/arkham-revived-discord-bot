@@ -1,4 +1,5 @@
-import type { ChangeValue, ProfileChange, StatChange, StatDeltas } from "./types.ts";
+import { formatLocalized } from "./localization.ts";
+import type { ChangeValue, DiscordStrings, ProfileChange, StatChange, StatDeltas } from "./types.ts";
 
 export type StatKey = keyof StatDeltas;
 
@@ -19,28 +20,16 @@ export function classifyStat(path: string): StatKey | null {
 	return null;
 }
 
-const statLabels: Record<string, string> = {
-	AccountXP: "Account XP",
-	jokerXP: "Joker XP",
-	baneXP: "Bane XP",
-	AccountXPLevel: "Account Level",
-	jokerXPLevel: "Joker Level",
-	baneXPLevel: "Bane Level",
-	PrestigeLevel: "Prestige",
-	HeroKillsOnElites: "Hero Kills",
-	EliteKillsOnHeroes: "Gang Kills"
-};
-
 const statOrder: Record<StatKey, number> = { xp: 0, levels: 1, prestige: 2, heroKills: 3, gangKills: 4 };
 
 /** Short, player friendly label for a stat field ("HeroKillsOnElites" -> "Hero Kills"). */
-export function statLabel(path: string): string {
+export function statLabel(path: string, strings: DiscordStrings): string {
 	const key = path.split(".").pop() ?? path;
-	return statLabels[key] ?? humanizeKey(path);
+	return strings.stat_labels[key] ?? humanizeKey(path);
 }
 
 /** Every XP/level/kill field that moved, with its delta and the player's resulting total. */
-export function deriveStatChanges(changes: ProfileChange[]): StatChange[] {
+export function deriveStatChanges(changes: ProfileChange[], strings: DiscordStrings): StatChange[] {
 	const stats = new Map<string, StatChange>();
 	for (const change of changes) {
 		const kind = classifyStat(change.path);
@@ -57,7 +46,7 @@ export function deriveStatChanges(changes: ProfileChange[]): StatChange[] {
 		}
 		stats.set(change.path, {
 			path: change.path,
-			label: statLabel(change.path),
+			label: statLabel(change.path, strings),
 			delta,
 			before: change.before,
 			after: change.after
@@ -85,8 +74,8 @@ export function mergeStatChanges(base: StatChange[], incoming: StatChange[]): St
 }
 
 /** Sums every positive stat change reported by the worker into a per-player delta. */
-export function deriveStatDeltas(changes: ProfileChange[]): StatDeltas {
-	return sumStatDeltas(deriveStatChanges(changes));
+export function deriveStatDeltas(changes: ProfileChange[], strings: DiscordStrings): StatDeltas {
+	return sumStatDeltas(deriveStatChanges(changes, strings));
 }
 
 export function sumStatDeltas(stats: StatChange[]): StatDeltas {
@@ -132,59 +121,79 @@ export function humanizeKey(path: string): string {
 	return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
-export function formatValue(value: ChangeValue): string {
-	if (value === null || value === undefined) return "*unset*";
-	if (typeof value === "boolean") return value ? "Yes" : "No";
-	if (typeof value === "number") return value.toLocaleString("en-US");
+export function formatValue(value: ChangeValue, strings: DiscordStrings, language: string): string {
+	if (value === null || value === undefined) return strings.unset_value;
+	if (typeof value === "boolean") return value ? strings.boolean_true : strings.boolean_false;
+	if (typeof value === "number") return value.toLocaleString(language);
 	const text = String(value).replace(/[\r\n\t]+/g, " ").trim();
-	if (!text) return "*empty*";
+	if (!text) return strings.empty_value;
 	const clipped = text.length > 60 ? `${text.slice(0, 57)}...` : text;
 	return `\`${clipped.replace(/`/g, "'")}\``;
 }
 
-export function formatDelta(value: number, prefix = "+"): string {
-	return `${prefix}${value.toLocaleString("en-US")}`;
+export function formatDelta(value: number, language: string, prefix = "+"): string {
+	return `${prefix}${value.toLocaleString(language)}`;
 }
 
 /**
  * Builds a short "before -> after" list for the player activity embed.
  * Stat changes are listed first so the interesting lines survive the truncation.
  */
-export function describeChanges(changes: ProfileChange[], limit = 12): string {
+export function describeChanges(changes: ProfileChange[], strings: DiscordStrings, language: string, limit = 12): string {
 	const ordered = [...changes].sort((left, right) => {
 		const leftStat = classifyStat(left.path) ? 0 : 1;
 		const rightStat = classifyStat(right.path) ? 0 : 1;
 		return leftStat - rightStat;
 	});
 	const shown = ordered.slice(0, limit);
-	const lines = shown.map(
-		(change) => `**${humanizeKey(change.path)}**: ${formatValue(change.before)} -> ${formatValue(change.after)}`
+	const lines = shown.map((change) =>
+		formatLocalized(strings.change_line, {
+			label: humanizeKey(change.path),
+			before: formatValue(change.before, strings, language),
+			after: formatValue(change.after, strings, language)
+		})
 	);
 	if (ordered.length > shown.length) {
-		lines.push(`*+${ordered.length - shown.length} more changes*`);
+		lines.push(formatLocalized(strings.more_changes, { count: ordered.length - shown.length }));
 	}
 	return lines.join("\n");
 }
 
 /** Describes a player's match contribution, e.g. "**XP**: +120 · **Levels**: +1". */
-export function describePlayerDeltas(deltas: StatDeltas): string {
+export function describePlayerDeltas(deltas: StatDeltas, strings: DiscordStrings, language: string): string {
 	const parts: string[] = [];
-	if (deltas.xp > 0) parts.push(`**XP**: ${formatDelta(deltas.xp)}`);
-	if (deltas.levels > 0) parts.push(`**Levels**: ${formatDelta(deltas.levels)}`);
-	if (deltas.prestige > 0) parts.push(`**Prestige**: ${formatDelta(deltas.prestige)}`);
-	if (deltas.heroKills > 0) parts.push(`**Hero kills**: ${formatDelta(deltas.heroKills)}`);
-	if (deltas.gangKills > 0) parts.push(`**Gang kills**: ${formatDelta(deltas.gangKills)}`);
-	return parts.length > 0 ? parts.join("\n") : "*No stat changes*";
+	const addDelta = (key: keyof DiscordStrings["delta_labels"], value: number): void => {
+		if (value > 0) {
+			parts.push(
+				formatLocalized(strings.player_delta_line, {
+					label: strings.delta_labels[key],
+					delta: formatDelta(value, language)
+				})
+			);
+		}
+	};
+	addDelta("xp", deltas.xp);
+	addDelta("levels", deltas.levels);
+	addDelta("prestige", deltas.prestige);
+	addDelta("hero_kills", deltas.heroKills);
+	addDelta("gang_kills", deltas.gangKills);
+	return parts.length > 0 ? parts.join("\n") : strings.no_stat_changes;
 }
 
 /**
  * Describes a player's match stat lines with both the gain and their resulting total:
  * "**Account XP**: +230 (total 1,480)".
  */
-export function describePlayerStats(stats: StatChange[]): string {
-	if (stats.length === 0) return "*No stat changes*";
+export function describePlayerStats(stats: StatChange[], strings: DiscordStrings, language: string): string {
+	if (stats.length === 0) return strings.no_stat_changes;
 	return stats
-		.map((stat) => `**${stat.label}**: ${formatDelta(stat.delta)} (total ${formatValue(stat.after)})`)
+		.map((stat) =>
+			formatLocalized(strings.player_stat_line, {
+				label: stat.label,
+				delta: formatDelta(stat.delta, language),
+				total: formatValue(stat.after, strings, language)
+			})
+		)
 		.join("\n");
 }
 
