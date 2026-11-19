@@ -324,6 +324,6 @@ export function formatKvUsageChannelName(
 	const filled = Math.floor(percent / 5);
 	return formatLocalized(strings.kv_usage_limited_channel_name, {
 		percent,
-		bar: `${"#".repeat(filled)}${".".repeat(20 - filled)}`
+		bar: `${"|".repeat(filled)}${".".repeat(20 - filled)}`
 	}).slice(0, 100);
 }
