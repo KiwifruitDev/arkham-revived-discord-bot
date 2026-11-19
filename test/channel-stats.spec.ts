@@ -46,7 +46,7 @@ describe("channel statistics", () => {
 
 	it("formats channel names from templates", () => {
 		expect(formatChannelName("Total PS3 Users: {count}", 1234)).toBe("Total PS3 Users: 1,234");
-		expect(formatChannelName("Users Authed Today: {count}", 0)).toBe("Users Authed Today: 0");
+		expect(formatChannelName("Logins (24h): {count}", 0)).toBe("Logins (24h): 0");
 	});
 
 	it("renames every statistics channel and sets the bot status", async () => {
@@ -55,8 +55,8 @@ describe("channel statistics", () => {
 			await ctx.service.refresh();
 
 			expect(ctx.discord.renames).toEqual([
-				{ channelId: testConfig.matches_played_today_channel_id, name: "Matches Played Today: 0" },
-				{ channelId: testConfig.unique_users_today_channel_id, name: "Users Authed Today: 0" },
+				{ channelId: testConfig.matches_played_today_channel_id, name: "Matches (24h): 0" },
+				{ channelId: testConfig.unique_users_today_channel_id, name: "Logins (24h): 0" },
 				{ channelId: testConfig.total_ps3_users_channel_id, name: "Total PS3 Users: 103" }
 			]);
 			expect(ctx.discord.presences).toEqual([
@@ -77,8 +77,8 @@ describe("channel statistics", () => {
 
 			await ctx.service.refresh();
 			const names = ctx.discord.renames.map((rename) => rename.name);
-			expect(names).toContain("Matches Played Today: 1");
-			expect(names).toContain("Users Authed Today: 2");
+			expect(names).toContain("Matches (24h): 1");
+			expect(names).toContain("Logins (24h): 2");
 			expect(ctx.discord.presences.at(-1)?.text).toBe("103 PS3 players · 1 matches today · 2 unique users");
 		} finally {
 			ctx.cleanup();
@@ -99,7 +99,7 @@ describe("channel statistics", () => {
 
 			ctx.advance(testConfig.channel_name_update_cooldown_ms);
 			await ctx.service.refresh();
-			expect(ctx.discord.renames.map((rename) => rename.name)).toContain("Matches Played Today: 1");
+			expect(ctx.discord.renames.map((rename) => rename.name)).toContain("Matches (24h): 1");
 		} finally {
 			ctx.cleanup();
 		}
@@ -113,8 +113,8 @@ describe("channel statistics", () => {
 			ctx.state.recordAuthentication("Another_Hermit");
 			await ctx.service.refresh();
 			expect(ctx.discord.renames.map((rename) => rename.name)).toEqual([
-				"Matches Played Today: 1",
-				"Users Authed Today: 1",
+				"Matches (24h): 1",
+				"Logins (24h): 1",
 				"Total PS3 Users: 103"
 			]);
 
@@ -122,11 +122,11 @@ describe("channel statistics", () => {
 			await vi.advanceTimersByTimeAsync(24 * HOUR + 1_000);
 
 			expect(ctx.discord.renames.map((rename) => rename.name)).toEqual([
-				"Matches Played Today: 1",
-				"Users Authed Today: 1",
+				"Matches (24h): 1",
+				"Logins (24h): 1",
 				"Total PS3 Users: 103",
-				"Matches Played Today: 0",
-				"Users Authed Today: 0"
+				"Matches (24h): 0",
+				"Logins (24h): 0"
 			]);
 			expect(ctx.state.matchesInWindow).toBe(0);
 			expect(ctx.state.uniqueUsersInWindow).toBe(0);
@@ -147,7 +147,7 @@ describe("channel statistics", () => {
 
 			ctx.advance(testConfig.channel_name_update_cooldown_ms);
 			await vi.advanceTimersByTimeAsync(testConfig.channel_name_update_cooldown_ms);
-			expect(ctx.discord.renames.map((rename) => rename.name)).toContain("Matches Played Today: 1");
+			expect(ctx.discord.renames.map((rename) => rename.name)).toContain("Matches (24h): 1");
 		} finally {
 			ctx.cleanup();
 		}

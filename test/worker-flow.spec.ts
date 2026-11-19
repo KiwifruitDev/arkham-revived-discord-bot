@@ -120,7 +120,7 @@ describe("cloudflare worker flow", () => {
 
 		expect(harness.discord.webhookMessages).toHaveLength(1);
 		const message = harness.discord.webhookMessages[0];
-		expect(message.username).toBe("Arkham: Revived: Redux - Another_Hermit (PS3)");
+		expect(message.username).toBe("Another_Hermit (PS3)");
 		expect(message.content).toBe("**Another_Hermit** (PS3) has logged in to Arkham: Revived Redux.");
 		expect(message.avatarUrl).toContain("Another_Hermit");
 		expect(message.webhookUrl).toBe(testEnv.discordWebhookUrl);
@@ -147,7 +147,7 @@ describe("cloudflare worker flow", () => {
 		expect(response.status).toBe(202);
 
 		const message = harness.discord.webhookMessages[0];
-		expect(message.username).toBe("Arkham: Revived: Redux - Another_Hermit (PS3)");
+		expect(message.username).toBe("Another_Hermit (PS3)");
 		expect(message.content).toBeUndefined();
 		const embed = message.embeds?.[0];
 		expect(embed?.description).toContain("**Account XP**: 1,250 -> 1,480");

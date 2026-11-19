@@ -17,7 +17,7 @@ Check out the Arkham: Revived page on [my website](https://kiwifruitdev.com/arkh
 | Player activity | The worker calls the bot's HTTP webhook on `/auth/token` and on every profile write. Logins are plain text messages, profile writes are a compact `before -> after` embed. Both are posted through the Discord webhook from `.env`, using the PS3 username and PSN avatar as the webhook identity. |
 | Publishing | Every activity message and every match result is crossposted, because the activity channel is an announcement channel. Discord only allows 10 crossposts per hour per channel, so publishes go through a persistent FIFO queue that waits for the window to reset instead of failing. |
 | Match results | When two or more players report an XP/level increase within 10 seconds, a match is assumed to have ended. The accumulated deltas **and** the resulting totals of each player are posted as a bot embed, together with an automatically sized grid of PSN avatars. |
-| Voice channel statistics | The `Total PS3 Users`, `Matches Played Today` and `Users Authed Today` voice channels are renamed with live numbers. The two "today" counters roll over individually: every match and every first authentication leaves the window exactly 24 hours after it was added, and the channel is edited as soon as it drops out. |
+| Voice channel statistics | The `Total PS3 Users`, `Matches (24h)` and `Logins (24h)` voice channels are renamed with live numbers. The two "24h" counters roll over individually: every match and every first authentication leaves the window exactly 24 hours after it was added, and the channel is edited as soon as it drops out. |
 | Bot status | The bot's own status line shows the live player/match numbers while it is online. |
 
 ### Message flow
@@ -70,7 +70,7 @@ values in `config.json`, everything secret belongs in `.env`.
 
 | Key | Default | Description |
 | --- | --- | --- |
-| `webhook_port` | `4321` | Port the worker webhook server listens on. |
+| `webhook_port` | `4322` | Port the worker webhook server listens on. |
 | `webhook_path` | `/webhook` | Path the worker posts to (must match `WEBHOOK_URL` in the worker). |
 | `publish_player_activity` | `true` | Crosspost activity messages and match results. |
 | `player_activity_channel_id` | | Announcement channel id for activity and match messages. |
@@ -78,14 +78,14 @@ values in `config.json`, everything secret belongs in `.env`.
 | `matches_played_today_channel_id` | | Voice channel renamed to the rolling 24 hour match count. |
 | `unique_users_today_channel_id` | | Voice channel renamed to the rolling 24 hour unique authentication count. |
 | `total_ps3_users_channel_name` | `Total PS3 Users: {count}` | Name template for the player count channel. |
-| `matches_played_today_channel_name` | `Matches Played Today: {count}` | Name template for the match count channel. |
-| `unique_users_today_channel_name` | `Users Authed Today: {count}` | Name template for the unique user channel. |
+| `matches_played_today_channel_name` | `Matches (24h): {count}` | Name template for the match count channel. |
+| `unique_users_today_channel_name` | `Logins (24h): {count}` | Name template for the unique user channel. |
 | `stats_window_ms` | `86400000` | Rolling window used by both "today" counters (24 hours). |
 | `channel_stats_update_interval_ms` | `600000` | How often the statistics channels (and the bot status) are refreshed. |
 | `channel_name_update_cooldown_ms` | `610000` | Minimum time between two renames of the same channel (Discord allows 2 per 10 minutes). |
 | `discord_server_id` | | Target guild id (informational). |
 | `psn_npsso_owner_name` | | PSN account that owns the NPSSO cookie (informational). |
-| `webhook_display_name` | `Arkham: Revived: Redux - {username} ({platform})` | Webhook display name template. |
+| `webhook_display_name` | `{username} ({platform})` | Webhook display name template. |
 | `match_detection_window_ms` | `10000` | Window in which players must report a stat increase. |
 | `match_detection_quiet_ms` | `3000` | Grace period after the last write before a match is posted. |
 | `match_min_players` | `2` | Distinct players required before a match is detected (minimum 2). |
@@ -177,8 +177,8 @@ Discord allows **10 crossposts per hour per announcement channel**, so every pub
 | Channel | Value | Rollover |
 | --- | --- | --- |
 | `Total PS3 Users: {count}` | Every `ps3_*` key in the PROFILES KV namespace. | n/a |
-| `Matches Played Today: {count}` | Matches detected in the last 24 hours. | Each match expires 24 h after it was detected. |
-| `Users Authed Today: {count}` | Distinct players that authenticated in the last 24 hours. | Each player expires 24 h after their first authentication. |
+| `Matches (24h): {count}` | Matches detected in the last 24 hours. | Each match expires 24 h after it was detected. |
+| `Logins (24h): {count}` | Distinct players that authenticated in the last 24 hours. | Each player expires 24 h after their first authentication. |
 
 The two "today" channels use a rolling window (`stats_window_ms`, 24 h) instead of a calendar day: every
 entry is timestamped when it is added and removed exactly 24 hours later. The service schedules a wake-up
