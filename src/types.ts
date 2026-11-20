@@ -66,6 +66,7 @@ export interface BotConfig {
 	channel_stats_update_interval_ms: number;
 	channel_name_update_cooldown_ms: number;
 	discord_server_id: string;
+	event_id: string;
 	psn_npsso_owner_name: string;
 	match_detection_window_ms: number;
 	match_detection_quiet_ms: number;

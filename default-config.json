@@ -30,5 +30,6 @@
   "publish_window_ms": 3600000,
   "publish_queue_max_age_ms": 7200000,
   "unique_users_today_channel_id": "1565647820600508468",
-  "stats_window_ms": 86400000
+  "stats_window_ms": 86400000,
+  "event_id": "1573116439097774080"
 }

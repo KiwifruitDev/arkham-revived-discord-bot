@@ -20,6 +20,7 @@ async function main(): Promise<void> {
 
 	const discord = new DiscordService({ token: env.discordBotToken, logger: logger.child("discord") });
 	await discord.login();
+	await discord.syncScheduledEvent(config.discord_server_id, config.event_id);
 
 	const psn = new PsnService({
 		npsso: env.psnNpsso,

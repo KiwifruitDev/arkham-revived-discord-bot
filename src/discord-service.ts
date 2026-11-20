@@ -1,9 +1,10 @@
-import { ChannelType } from "discord.js";
+import { ChannelType, GuildScheduledEventStatus } from "discord.js";
 import { ActivityType, Client, GatewayIntentBits } from "discord.js";
 import type { APIEmbed, MessageCreateOptions } from "discord.js";
 import { silentLogger } from "./logger.ts";
 import type { Logger } from "./logger.ts";
 import type { PublishResult } from "./publish-queue.ts";
+import { manageScheduledEvent } from "./scheduled-event.ts";
 
 export interface AttachmentFile {
 	name: string;
@@ -41,6 +42,7 @@ export class DiscordService {
 	private readonly sleep: (ms: number) => Promise<void>;
 	private readonly ownClient: boolean;
 	private readonly warnedChannels = new Set<string>();
+	private readonly scheduledEventStops = new Set<() => void>();
 
 	constructor(options: DiscordServiceOptions) {
 		this.token = options.token;
@@ -62,7 +64,39 @@ export class DiscordService {
 	}
 
 	async destroy(): Promise<void> {
+		for (const stop of this.scheduledEventStops) stop();
+		this.scheduledEventStops.clear();
 		if (this.client.isReady()) await this.client.destroy();
+	}
+
+	/** Starts or completes the configured Discord scheduled event at its scheduled times. */
+	async syncScheduledEvent(guildId: string, eventId: string): Promise<void> {
+		if (!guildId || !eventId) return;
+		try {
+			const guild = await this.client.guilds.fetch(guildId);
+			const event = await guild.scheduledEvents.fetch(eventId);
+			const startAt = event.scheduledStartAt;
+			const endAt = event.scheduledEndAt;
+			if (!startAt || !endAt) {
+				this.logger.warn(`Scheduled event ${eventId} is missing a start or end time`);
+				return;
+			}
+
+			const stop = await manageScheduledEvent({
+				startAt: startAt.getTime(),
+				endAt: endAt.getTime(),
+				status: event.status,
+				setStatus: async (status) => {
+					await event.setStatus(status);
+				},
+				logger: this.logger
+			});
+			this.scheduledEventStops.add(stop);
+		} catch (error) {
+			this.logger.error(
+				`Unable to synchronize scheduled event ${eventId}: ${error instanceof Error ? error.message : String(error)}`
+			);
+		}
 	}
 
 	private async postJson(url: string, body: unknown, attempts = 2): Promise<{ ok: boolean; status: number; json: Record<string, unknown> | null }> {

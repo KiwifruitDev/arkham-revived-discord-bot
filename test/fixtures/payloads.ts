@@ -23,6 +23,7 @@ export const testConfig: BotConfig = {
 	channel_stats_update_interval_ms: 600_000,
 	channel_name_update_cooldown_ms: 610_000,
 	discord_server_id: "1444360529421406384",
+	event_id: "",
 	psn_npsso_owner_name: "KiwifruitDev",
 	match_detection_window_ms: 10_000,
 	match_detection_quiet_ms: 3_000,

@@ -37,7 +37,7 @@ PS3 client ──► Cloudflare Worker ──► POST /webhook ──► Discord
 ## Requirements
 
 - Node.js 24 or newer (the bot runs `index.ts` directly through Node's built-in TypeScript support)
-- A Discord bot application with the `Guilds` intent and `Manage Channels`, `Send Messages`,
+- A Discord bot application with the `Guilds` intent and `Manage Events`, `Manage Channels`, `Send Messages`,
   `Manage Messages` and `Manage Webhooks` permissions in the server
 - A PSN `NPSSO` cookie (used to look up PSN avatars)
 - A Discord webhook in the player activity channel
@@ -86,6 +86,7 @@ The `language` setting selects a JSON file in `lang/` for all user-facing Discor
 | `channel_stats_update_interval_ms` | `600000` | How often the statistics channels (and the bot status) are refreshed. |
 | `channel_name_update_cooldown_ms` | `610000` | Minimum time between two renames of the same channel (Discord allows 2 per 10 minutes). |
 | `discord_server_id` | | Target guild id (informational). |
+| `event_id` | `1573116439097774080` | Discord scheduled event id. The bot activates and completes it at its scheduled start and end times. |
 | `psn_npsso_owner_name` | | PSN account that owns the NPSSO cookie (informational). |
 | `match_detection_window_ms` | `10000` | Window in which players must report a stat increase. |
 | `match_detection_quiet_ms` | `3000` | Grace period after the last write before a match is posted. |
